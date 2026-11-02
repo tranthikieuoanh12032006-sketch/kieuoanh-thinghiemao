@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CV Tương tác - Trần Thị Kiều Oanh</title>
+    
+    <!-- Các thư viện cần thiết -->
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+    <script src="https://unpkg.com/babel-standalone@6/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- Cấu hình màu sắc Tailwind -->
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        pastel: {
+                            purple: '#d4b4e5',
+                            dark: '#5a3d6b',
+                            light: '#f5eef8'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        /* Hiệu ứng chuyển đổi mượt mà */
+        body { transition: background-color 0.3s, color 0.3s; }
+        
+        /* Hiệu ứng làm mờ nội dung đang bị khóa */
+        .content-blur {
+            filter: blur(12px);
+            user-select: none;
+            pointer-events: none;
+            transition: filter 1.5s ease-in-out;
+        }
+        
+        /* Khi đã mở khóa */
+        .content-clear {
+            filter: blur(0px);
+            transition: filter 1.5s ease-in-out;
+        }
+
+        /* Lớp phủ thử thách đè lên trên nội dung bị mờ */
+        .challenge-overlay {
+            position: absolute;
+            inset: 0;
+            z-index: 20;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: rgba(255, 255, 255, 0.4);
+            backdrop-filter: blur(2px);
+            border-radius: 1rem;
+            padding: 1.5rem;
+            text-align: center;
+        }
+        
+        .dark .challenge-overlay { background: rgba(30, 41, 59, 0.6); }
+
+        /* Khung kính trong suốt (Glassmorphism) */
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15);
+        }
+        .dark .glass-panel {
+            background: rgba(30, 41, 59, 0.85);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+    </style>
+</head>
+<body class="min-h-screen relative font-sans text-gray-800 dark:text-gray-100">
+    <div id="root"></div>
+
+    <script type="text/babel">
+        // =====================================================================
+        // 1. KHU VỰC DỮ LIỆU CÁ NHÂN (CONFIG) - DỄ DÀNG CHỈNH SỬA TẠI ĐÂY
+        // =====================================================================
+        const CV_DATA = {
+            images: {
+		logo: "anh1.jpg", //Ảnh 1: Logo Trường
+		avatar: "anh2.jpg", //Ảnh 2: Avatar
+		background: "anh3.jpg", //Ảnh 3:Background
+            },
+            personalInfo: {
+                name: "Trần Thị Kiều Oanh",
+                gender: "Nữ",
+                dob: "12/3/2006",
+                intro: "Chào mừng bạn đến với Portfolio của tôi! Hãy vận dụng kiến thức Hóa học để mở khóa toàn bộ thông tin nhé."
+            },
+            education: {
+                school: "Trường Đại học Sư phạm Thành phố Hồ Chí Minh",
+                year: "Sinh viên năm 3",
+                faculty: "Khoa: Hóa học",
+                major: "Ngành học: Sư phạm Khoa học Tự nhiên",
+                studentId: "MSSV: 50.01.401.154"
+            },
+            achievements: [
+                "THPT 3 năm liền đều được học sinh giỏi",
+                "Đạt Giải Nhì (cấp Khoa) tại Hội nghị sinh viên nghiên cứu khoa học năm học 2025-2026"
+            ],
+            experience: [
+                "Có 2 năm kinh nghiệm gia sư các môn Toán và KHTN cho học sinh cấp THCS."
+            ],
+            contact: {
+                facebook: "Trần Thị Kiều Oanh",
+                email: "tranthikieuoanh12032006@gmail.com",
+                address: "351A Lạc Long Quân, P. Hòa Bình, Tp.Hồ Chí Minh"
+            },
+            socials: {
+                facebookUrl: "#", 
+                instagramUrl: "#",
+    		zaloUrl: "#"
+            }
+        };
+
+        // =====================================================================
+        // 2. LOGIC VÀ GIAO DIỆN REACTJS
+        // =====================================================================
+        const App = () => {
+            // States quản lý Dark Mode
+            const [isDarkMode, setIsDarkMode] = React.useState(false);
+
+            // States quản lý mở khóa 3 phần
+            const [unlocked1, setUnlocked1] = React.useState(false); // Mở khóa Cá nhân & Học vấn
+            const [unlocked2, setUnlocked2] = React.useState(false); // Mở khóa Thành tích & Kinh nghiệm
+            const [unlocked3, setUnlocked3] = React.useState(false); // Mở khóa Liên hệ
+
+            // States Thử thách 1 (Quỳ tím)
+            const [litmusColor, setLitmusColor] = React.useState('#a855f7'); // Màu tím ban đầu
+            
+            // States Thử thách 2 & 3
+            const [ans2, setAns2] = React.useState('');
+            const [err2, setErr2] = React.useState('');
+            const [ans3, setAns3] = React.useState('');
+            const [err3, setErr3] = React.useState('');
+
+            // Chuyển đổi Dark / Light mode
+            const toggleTheme = () => {
+                setIsDarkMode(!isDarkMode);
+                document.documentElement.classList.toggle('dark');
+            };
+
+            // --- XỬ LÝ THỬ THÁCH 1: KÉO THẢ AXIT VÀO QUỲ TÍM ---
+            const handleDragStart = (e) => e.dataTransfer.setData('chem', 'acid');
+            const handleDragOver = (e) => e.preventDefault();
+            const handleDrop = (e) => {
+                e.preventDefault();
+                if (e.dataTransfer.getData('chem') === 'acid') {
+                    setLitmusColor('#ef4444'); // Hóa đỏ
+                    setTimeout(() => setUnlocked1(true), 1200); // Đợi 1.2s rồi mở khóa
+                }
+            };
+
+            // --- XỬ LÝ THỬ THÁCH 2: MẬT MÃ BẢNG TUẦN HOÀN ---
+            const checkChallenge2 = (e) => {
+                e.preventDefault();
+                const answer = ans2.trim().toLowerCase();
+                // Nước = H2O
+                if (answer === 'h2o' || answer === 'nước') {
+                    setUnlocked2(true);
+                } else {
+                    setErr2('Sai rồi! (Gợi ý: Công thức hóa học của nước là gì?)');
+                }
+            };
+
+            // --- XỬ LÝ THỬ THÁCH 3: CÂN BẰNG PHƯƠNG TRÌNH ---
+            const checkChallenge3 = (e) => {
+                e.preventDefault();
+                const answer = ans3.trim();
+                // 2H2 + O2 -> 2H2O => Hệ số của O2 là 1
+                if (answer === '1') {
+                    setUnlocked3(true);
+                } else {
+                    setErr3('Chưa chính xác! Nhìn kỹ hệ số nhé.');
+                }
+            };
+
+            return (
+                <div 
+                    className="min-h-screen p-4 md:p-8 relative"
+                    style={{
+                        backgroundImage: `url('${CV_DATA.images.background}')`,
+                        backgroundSize: 'cover',
+                        backgroundPosition: 'center',
+                        backgroundAttachment: 'fixed'
+                    }}
+                >
+                    {/* Lớp phủ màu tím pastel cho Background để dễ đọc chữ */}
+                    <div className={`absolute inset-0 z-0 ${isDarkMode ? 'bg-pastel-dark/90' : 'bg-pastel-light/90'}`}></div>
+
+                    <div className="relative z-10 max-w-5xl mx-auto space-y-8">
+                        
+                        {/* HEADER: Logo trường và Nút Dark Mode */}
+                        <header className="flex justify-between items-center bg-white/80 dark:bg-gray-800/80 backdrop-blur-md p-4 rounded-2xl shadow-md border-b-4 border-pastel-purple">
+                            <div className="flex items-center gap-4">
+                                <img src={CV_DATA.images.logo} alt="Logo HCMUE" className="w-16 h-16 rounded-full object-contain bg-white -p1 shadow-sm border-2 border-pastel-purple" />
+                                <div>
+                                    <h1 className="text-xl md:text-2xl font-bold text-pastel-dark dark:text-pastel-purple uppercase">
+                                        Đại học Sư phạm TP.HCM
+                                    </h1>
+                                    <p className="text-sm font-semibold text-gray-600 dark:text-gray-300">Khoa Hóa học</p>
+                                </div>
+                            </div>
+                            <button onClick={toggleTheme} className="w-12 h-12 rounded-full bg-pastel-purple text-white shadow-lg flex items-center justify-center text-xl hover:scale-105 transition">
+                                {isDarkMode ? <i className="fas fa-sun"></i> : <i className="fas fa-moon"></i>}
+                            </button>
+                        </header>
+
+                        {/* SECTION 1: CÁ NHÂN & HỌC VẤN (Bị khóa bởi Thử thách 1) */}
+                        <section className="relative rounded-3xl overflow-hidden glass-panel">
+                            {!unlocked1 && (
+                                <div className="challenge-overlay">
+                                    <h2 className="text-2xl font-bold text-pastel-dark dark:text-pastel-purple mb-4">
+                                        <i className="fas fa-flask mr-2"></i>Thử thách 1: Phòng Thí nghiệm Ảo
+                                    </h2>
+                                    <p className="mb-6 font-medium">Hãy kéo lọ <b>Dung dịch Axit</b> nhỏ vào <b>Giấy Quỳ Tím</b> để xem hiện tượng và mở khóa hồ sơ!</p>
+                                    
+                                    <div className="flex items-center gap-8 bg-white/50 p-6 rounded-xl shadow-inner border border-gray-200">
+                                        {/* Ống nhỏ giọt Axit (Draggable) */}
+                                        <div 
+                                            draggable 
+                                            onDragStart={handleDragStart} 
+                                            className="cursor-grab flex flex-col items-center hover:scale-110 transition"
+                                        >
+                                            <div className="w-8 h-16 border-2 border-gray-400 bg-blue-100/50 rounded-b-xl rounded-t relative overflow-hidden">
+                                                <div className="absolute bottom-0 w-full h-1/2 bg-blue-300"></div>
+                                            </div>
+                                            <span className="mt-2 font-bold text-blue-600">Axit (HCl)</span>
+                                        </div>
+                                        
+                                        <i className="fas fa-arrow-right text-2xl text-gray-400"></i>
+
+                                        {/* Giấy Quỳ Tím (Drop Target) */}
+                                        <div 
+                                            onDragOver={handleDragOver} 
+                                            onDrop={handleDrop}
+                                            className="flex flex-col items-center"
+                                        >
+                                            <div 
+                                                className="w-16 h-20 shadow-md border border-gray-300 transition-colors duration-1000"
+                                                style={{ backgroundColor: litmusColor }}
+                                            ></div>
+                                            <span className="mt-2 font-bold" style={{color: litmusColor}}>Giấy Quỳ Tím</span>
+                                        </div>
+                                    </div>
+                                    {litmusColor === '#ef4444' && <p className="mt-4 text-red-500 font-bold animate-pulse text-lg">Quỳ tím đã hóa đỏ! Đang mở khóa...</p>}
+                                </div>
+                            )}
+
+                            {/* Nội dung bị mờ nếu chưa mở khóa */}
+                            <div className={`p-8 md:p-12 ${unlocked1 ? 'content-clear' : 'content-blur'}`}>
+                                <div className="flex flex-col md:flex-row gap-8 items-center md:items-start">
+                                    {/* Khối Ảnh đại diện bo tròn có thông tin */}
+                                    <div className="w-full md:w-1/3 flex flex-col items-center bg-white dark:bg-gray-700 p-6 rounded-3xl shadow-lg border-t-4 border-pastel-purple text-center">
+                                        <img src={CV_DATA.images.avatar} alt="Avatar" className="w-40 h-40 rounded-full object-cover border-4 border-pastel-purple shadow-md mb-4" />
+                                        <h2 className="text-2xl font-bold text-pastel-dark dark:text-pastel-purple uppercase">{CV_DATA.personalInfo.name}</h2>
+                                        <p className="text-gray-500 dark:text-gray-300 mt-1 font-medium">{CV_DATA.education.major}</p>
+                                        <div className="w-full h-px bg-gray-200 dark:bg-gray-600 my-4"></div>
+                                        <div className="text-left w-full space-y-2 text-sm">
+                                            <p><b>Giới tính:</b> {CV_DATA.personalInfo.gender}</p>
+                                            <p><b>Ngày sinh:</b> {CV_DATA.personalInfo.dob}</p>
+                                        </div>
+                                    </div>
+
+                                    {/* Khối Giới thiệu & Học vấn */}
+                                    <div className="w-full md:w-2/3 space-y-6">
+                                        <div className="bg-pastel-light dark:bg-gray-700/50 p-6 rounded-2xl border-l-4 border-pastel-purple">
+                                            <h3 className="text-xl font-bold text-pastel-dark dark:text-white mb-2">Giới thiệu</h3>
+                                            <p className="italic text-gray-700 dark:text-gray-300">"{CV_DATA.personalInfo.intro}"</p>
+                                        </div>
+
+                                        <div>
+                                            <h3 className="text-2xl font-bold text-pastel-dark dark:text-pastel-purple border-b-2 border-gray-200 dark:border-gray-600 pb-2 mb-4 flex items-center gap-2">
+                                                <i className="fas fa-graduation-cap"></i> Học vấn
+                                            </h3>
+                                            <ul className="space-y-3 text-lg">
+                                                <li><b>Trường:</b> {CV_DATA.education.school} <span className="text-sm bg-pastel-purple text-white px-2 py-1 rounded ml-2">{CV_DATA.education.year}</span></li>
+                                                <li><b>Khoa:</b> Hóa học</li>
+                                                <li><b>Ngành:</b> Sư phạm Khoa học Tự nhiên</li>
+                                                <li><b>{CV_DATA.education.studentId}</b></li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </section>
+
+                        {/* SECTION 2: THÀNH TÍCH & KINH NGHIỆM (Bị khóa bởi Thử thách 2) */}
+                        <section className="relative rounded-3xl overflow-hidden glass-panel">
+                            {!unlocked2 && (
+                                <div className="challenge-overlay">
+                                    <h2 className="text-2xl font-bold text-pastel-dark dark:text-pastel-purple mb-4">
+                                        <i className="fas fa-puzzle-piece mr-2"></i>Thử thách 2: Mật mã Hóa học
+                                    </h2>
+                                    <div className="bg-white/80 dark:bg-gray-800 p-6 rounded-xl shadow-md max-w-md w-full">
+                                        <p className="font-semibold mb-4 text-lg">"Tôi là chất lỏng quan trọng nhất cho sự sống, được tạo thành từ 2 nguyên tử H và 1 nguyên tử O. Tôi là gì?"</p>
+                                        <form onSubmit={checkChallenge2} className="flex gap-2">
+                                            <input type="text" value={ans2} onChange={(e)=>setAns2(e.target.value)} placeholder="Nhập công thức (VD: NaCl, H2O...)" className="flex-1 px-4 py-2 rounded-lg border-2 border-gray-300 focus:border-pastel-purple focus:outline-none dark:bg-gray-700 dark:border-gray-600" />
+                                            <button type="submit" className="bg-pastel-purple hover:bg-pastel-dark text-white px-6 py-2 rounded-lg font-bold transition">Giải mã</button>
+                                        </form>
+                                        {err2 && <p className="text-red-500 mt-2 font-medium">{err2}</p>}
+                                    </div>
+                                </div>
+                            )}
+
+                            <div className={`p-8 md:p-12 ${unlocked2 ? 'content-clear' : 'content-blur'} grid grid-cols-1 md:grid-cols-2 gap-8`}>
+                                <div>
+                                    <h3 className="text-2xl font-bold text-pastel-dark dark:text-pastel-purple border-b-2 border-gray-200 dark:border-gray-600 pb-2 mb-4 flex items-center gap-2">
+                                        <i className="fas fa-trophy"></i> Thành tích
+                                    </h3>
+                                    <ul className="list-disc pl-5 space-y-3 text-lg">
+                                        {CV_DATA.achievements.map((item, idx) => <li key={idx}>{item}</li>)}
+                                    </ul>
+                                </div>
+                                <div>
+                                    <h3 className="text-2xl font-bold text-pastel-dark dark:text-pastel-purple border-b-2 border-gray-200 dark:border-gray-600 pb-2 mb-4 flex items-center gap-2">
+                                        <i className="fas fa-briefcase"></i> Kinh nghiệm giảng dạy
+                                    </h3>
+                                    <ul className="list-disc pl-5 space-y-3 text-lg">
+                                        {CV_DATA.experience.map((item, idx) => <li key={idx}>{item}</li>)}
+                                    </ul>
+                                </div>
+                            </div>
+                        </section>
+
+                        {/* SECTION 3: LIÊN HỆ (Bị khóa bởi Thử thách 3) */}
+                        <section className="relative rounded-3xl overflow-hidden glass-panel">
+                            {!unlocked3 && (
+                                <div className="challenge-overlay">
+                                    <h2 className="text-2xl font-bold text-pastel-dark dark:text-pastel-purple mb-4">
+                                        <i className="fas fa-balance-scale mr-2"></i>Thử thách 3: Cân bằng phương trình
+                                    </h2>
+                                    <div className="bg-white/80 dark:bg-gray-800 p-6 rounded-xl shadow-md max-w-md w-full">
+                                        <p className="font-semibold mb-4 text-lg">Tìm hệ số x trong phương trình sau:</p>
+                                        <div className="text-2xl font-mono font-bold text-center mb-4 text-pastel-dark dark:text-pastel-purple bg-pastel-light dark:bg-gray-700 py-3 rounded-lg">
+                                            2H₂ + <span className="text-red-500">x</span>O₂ ➔ 2H₂O
+                                        </div>
+                                        <form onSubmit={checkChallenge3} className="flex gap-2">
+                                            <input type="number" value={ans3} onChange={(e)=>setAns3(e.target.value)} placeholder="Nhập x..." className="flex-1 px-4 py-2 rounded-lg border-2 border-gray-300 focus:border-pastel-purple text-center font-bold text-xl dark:bg-gray-700 dark:border-gray-600" />
+                                            <button type="submit" className="bg-pastel-purple hover:bg-pastel-dark text-white px-6 py-2 rounded-lg font-bold transition">Mở khóa</button>
+                                        </form>
+                                        {err3 && <p className="text-red-500 mt-2 font-medium">{err3}</p>}
+                                    </div>
+                                </div>
+                            )}
+
+                            <div className={`p-8 md:p-12 ${unlocked3 ? 'content-clear' : 'content-blur'}`}>
+                                <h3 className="text-2xl font-bold text-center text-pastel-dark dark:text-pastel-purple mb-8 flex items-center justify-center gap-2">
+                                    <i className="fas fa-address-card"></i> Thông tin Liên hệ
+                                </h3>
+                                
+                                <div className="flex flex-col md:flex-row gap-8 items-center justify-around">
+                                    <div className="space-y-4 text-lg">
+                                        <p className="flex items-center gap-3"><i className="fab fa-facebook text-blue-600 text-2xl w-8"></i> {CV_DATA.contact.facebook}</p>
+                                        <p className="flex items-center gap-3"><i className="fas fa-envelope text-red-500 text-2xl w-8"></i> <a href={`mailto:${CV_DATA.contact.email}`} className="hover:text-pastel-purple transition">{CV_DATA.contact.email}</a></p>
+                                        <p className="flex items-center gap-3"><i className="fas fa-map-marker-alt text-green-600 text-2xl w-8"></i> {CV_DATA.contact.address}</p>
+                                    </div>
+                                    
+                                    {/* Mạng xã hội Icons */}
+                                    <div className="flex gap-4">
+                                        <a href={CV_DATA.socials.facebookUrl} className="w-14 h-14 rounded-full bg-blue-600 text-white flex items-center justify-center text-2xl hover:scale-110 transition"><i className="fab fa-facebook-f"></i></a>
+                                        <a href={CV_DATA.socials.instagramUrl} className="w-14 h-14 rounded-full bg-gray-800 text-white flex items-center justify-center text-2xl hover:scale-110 transition"><i className="fab fa-instagram"></i></a>
+                                        <a href={CV_DATA.socials.zaloUrl} className="w-14 h-14 rounded-full bg-blue-500 text-white flex items-center justify-center text-2xl hover:scale-110 transition"><i className="fab fa-zalo"></i>Zalo</a>
+                                    </div>
+                                </div>
+                            </div>
+                        </section>
+
+                        <footer className="text-center pb-8 text-sm text-gray-600 dark:text-gray-400 font-medium">
+                            &copy; 2026 - Designed by {CV_DATA.personalInfo.name} | Sư phạm Khoa học Tự nhiên HCMUE
+                        </footer>
+
+                    </div>
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
